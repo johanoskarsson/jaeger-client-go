@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/uber/jaeger-client-go/thrift"
@@ -163,7 +165,14 @@ func (c *HTTPTransport) send(spans []*j.Span) error {
 	}
 	resp.Body.Close()
 	if resp.StatusCode >= http.StatusBadRequest {
-		return fmt.Errorf("error from collector: %d. Body: %v", resp.StatusCode, string(b))
+		var durations strings.Builder
+		for _, s := range spans {
+			durations.WriteString(strconv.FormatInt(s.SpanId, 10))
+			durations.WriteString(": ")
+			durations.WriteString(strconv.FormatInt(s.Duration, 10))
+			durations.WriteString(". ")
+		}
+		return fmt.Errorf("error from collector: %d. Body: %v. Durations: %v", resp.StatusCode, string(b), durations.String())
 	}
 	return nil
 }
